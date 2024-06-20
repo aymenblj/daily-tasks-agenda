@@ -1,151 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
+#include "agenda.h"
 #include <ctype.h>
-#include <pthread.h>
-#include <string.h>
-
-#define MAX_TASKS 20
-#define MAX_TASKS 20
-#define MAX_NAME_LEN 50
-#define TIME_STR_LEN 6
-#define STATUS_LEN 10
-#define NOTIF_LEN 15
-#define INPUT_BUF_LEN 10
-#define DELAY_SECONDS 3 // Define delay duration
-
-// Task structure to store task details
-typedef struct
-{
-    char name[MAX_NAME_LEN];            // Task name
-    char start_time[TIME_STR_LEN];      // Start time (HH:MM)
-    char end_time[TIME_STR_LEN];        // End time (HH:MM)
-    char reminder_time[TIME_STR_LEN];   // Reminder time (HH:MM)
-    char status[STATUS_LEN];            // Task status ("undone" or "done")
-    char start_notification[NOTIF_LEN]; // Start notification status ("not_notified" or "notified")
-    char end_notification[NOTIF_LEN];   // End notification status ("not_notified" or "notified")
-} Task;
-
-// SharedState structure to manage shared data and synchronization
-typedef struct
-{
-    Task calendar[MAX_TASKS];    // Array of calendar
-    int num_tasks;               // Number of calendar
-    pthread_mutex_t task_mutex;  // Mutex for task operations
-    time_t program_start_time;   // Program start time
-    double speedup_factor;       // Speedup factor for virtual time
-    pthread_mutex_t print_mutex; // Mutex for print operations
-    int print_time;              // Flag to indicate print request
-    int input_flag;              // Flag to indicate input availability
-    char input_buffer[10];       // Buffer for user input
-    int awaiting_response;       // Flag to indicate waiting for user response
-    Task *current_task;          // Pointer to current task being processed
-    struct tm virtual_tm_info;   // Virtual time information
-    pthread_mutex_t time_mutex;  // Mutex for time operations
-    int current_day;             // Current day
-} SharedState;
-
-// Function prototypes
-void add_task(SharedState *state, const char *name, const char *start_time, const char *end_time);
-void reset_calendar(SharedState *state);
-#ifdef DEBUG
-void display_time(struct tm *tm_info);
-#endif // DEBUG
-void display_task_info(SharedState *state, const char *time_str, int use_virtual_time);
-void notify_task_start(Task *task, struct tm *virtual_tm_info);
-void notify_task_end(Task *task, struct tm *virtual_tm_info);
-void display_task_notification(SharedState *state);
-void *start_clock(void *arg);
-void *display_and_interaction(void *arg);
-void *display_notifications(void *arg);
-void *user_input_handle(void *arg);
-void *process_input(void *arg);
-
-int main()
-{
-    SharedState state;
-
-    // Initialize shared state
-    state.num_tasks = 0;
-    state.print_time = 0;
-    state.input_flag = 0;
-    state.awaiting_response = 0;
-    state.current_task = NULL;
-    state.program_start_time = time(NULL);
-
-    // Initialize mutexes
-    if (pthread_mutex_init(&state.task_mutex, NULL) != 0)
-    {
-        fprintf(stderr, "Error: Failed to initialize task_mutex\n");
-        return EXIT_FAILURE;
-    }
-    if (pthread_mutex_init(&state.print_mutex, NULL) != 0)
-    {
-        fprintf(stderr, "Error: Failed to initialize print_mutex\n");
-        return EXIT_FAILURE;
-    }
-    if (pthread_mutex_init(&state.time_mutex, NULL) != 0)
-    {
-        fprintf(stderr, "Error: Failed to initialize time_mutex\n");
-        return EXIT_FAILURE;
-    }
-
-    // Setup an actual clock
-    state.speedup_factor = 1;
-#ifdef DEBUG
-    // Input speedup factor
-    printf("Enter the speedup factor: ");
-    scanf("%lf", &state.speedup_factor);
-    getchar(); // Consume the newline character left by scanf
-#endif // DEBUG
-
-    // Add calendar covering 24 hours
-    add_task(&state, "Sleep", "00:00", "07:00");
-    add_task(&state, "Wake up and wash", "07:00", "07:30");
-    add_task(&state, "Make bed", "07:30", "08:00");
-    add_task(&state, "Prepare breakfast", "08:00", "08:30");
-    add_task(&state, "Have breakfast", "08:30", "09:00");
-    add_task(&state, "Morning walk", "09:00", "10:00");
-    add_task(&state, "Read newspaper", "10:00", "11:00");
-    add_task(&state, "Gardening", "11:00", "12:00");
-    add_task(&state, "Lunch preparation", "12:00", "13:00");
-    add_task(&state, "Have lunch", "13:00", "13:30");
-    add_task(&state, "Nap time", "13:30", "15:00");
-    add_task(&state, "Afternoon tea", "15:00", "16:00");
-    add_task(&state, "Family time", "16:00", "18:00");
-    add_task(&state, "Dinner preparation", "18:00", "19:00");
-    add_task(&state, "Have dinner", "19:00", "19:30");
-    add_task(&state, "Watch TV", "19:30", "21:00");
-    add_task(&state, "Relax and prepare for bed", "21:00", "22:00");
-    add_task(&state, "Sleep", "22:00", "23:59");
-
-    // Initialize the current day
-    struct tm *initial_tm = localtime(&state.program_start_time);
-    state.current_day = initial_tm->tm_mday;
-
-    // Initialize threads
-    pthread_t clock_thread, display_thread, input_thread, display_notification_thread, input_processing_thread;
-    pthread_create(&clock_thread, NULL, start_clock, &state);
-    pthread_create(&display_thread, NULL, display_and_interaction, &state);
-    pthread_create(&input_thread, NULL, user_input_handle, &state);
-    pthread_create(&display_notification_thread, NULL, display_notifications, &state);
-    pthread_create(&input_processing_thread, NULL, process_input, &state);
-
-    // Join threads
-    pthread_join(clock_thread, NULL);
-    pthread_join(display_thread, NULL);
-    pthread_join(input_thread, NULL);
-    pthread_join(display_notification_thread, NULL);
-    pthread_join(input_processing_thread, NULL);
-
-    // Destroy mutexes
-    pthread_mutex_destroy(&state.task_mutex);
-    pthread_mutex_destroy(&state.print_mutex);
-    pthread_mutex_destroy(&state.time_mutex);
-
-    return EXIT_SUCCESS;
-}
 
 // Function to add a task to the shared state
 void add_task(SharedState *state, const char *name, const char *start_time, const char *end_time)
@@ -283,7 +137,7 @@ void display_task_info(SharedState *state, const char *time_str, int use_virtual
             {
                 if (!state->awaiting_response)
                 {
-                    printf("Are you doing this task now? (yes/no): ");
+                    printf("Are you doing this task now? (yes/no):\n");
                     fflush(stdout);
                     state->awaiting_response = 1;
                     state->current_task = task;
@@ -302,11 +156,11 @@ void display_task_info(SharedState *state, const char *time_str, int use_virtual
     {
         if (time_str)
         {
-            printf("No task found for the entered time: %s.\n", time_str);
+            printf("No task found for the entered time: %s.\n\n", time_str);
         }
         else if (use_virtual_time)
         {
-            printf("No task found for the current virtual time.\n");
+            printf("No task found for the current virtual time.\n\n");
         }
     }
 
@@ -378,7 +232,7 @@ void display_task_notification(SharedState *state)
 int is_valid_time_format(const char *time_str)
 {
     int len = strlen(time_str);
-    if (len != 5 && len != 4)
+    if (len != 5 && len != 4 && len != 3)
         return 0; // Valid lengths are 4 or 5 characters
 
     // Check the colon position
@@ -476,7 +330,12 @@ void *display_and_interaction(void *arg)
 #ifdef DEBUG
             display_time(&state->virtual_tm_info);
 #endif // DEBUG
-            display_task_info(state, NULL, 1);
+
+            if (strcmp(state->input_buffer, "now") == 0)
+                display_task_info(state, NULL, 1);
+            else
+                display_task_info(state, state->input_buffer, 0);
+
             pthread_mutex_unlock(&state->time_mutex);
         }
         pthread_mutex_unlock(&state->print_mutex);
@@ -574,13 +433,9 @@ void *process_input(void *arg)
             }
             else
             {
-                if (strcmp(state->input_buffer, "now") == 0)
+                if (strcmp(state->input_buffer, "now") == 0 || is_valid_time_format(state->input_buffer))
                 {
                     state->print_time = 1;
-                }
-                else if (is_valid_time_format(state->input_buffer))
-                {
-                    display_task_info(state, state->input_buffer, 0);
                 }
                 else
                 {

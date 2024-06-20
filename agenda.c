@@ -351,8 +351,8 @@ void *display_notifications(void *arg)
     while (1)
     {
         pthread_mutex_lock(&state->print_mutex);
-        // Check if there's no user input pending and no response awaited
-        if (!state->input_flag && !state->awaiting_response)
+        // Check if there's no response awaited
+        if (!state->awaiting_response)
         {
             pthread_mutex_lock(&state->time_mutex);
             display_task_notification(state);

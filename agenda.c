@@ -325,7 +325,6 @@ void *display_and_interaction(void *arg)
         pthread_mutex_lock(&state->print_mutex);
         if (state->print_time)
         {
-            state->print_time = 0;
             pthread_mutex_lock(&state->time_mutex);
 #ifdef DEBUG
             display_time(&state->virtual_tm_info);
@@ -337,6 +336,7 @@ void *display_and_interaction(void *arg)
                 display_task_info(state, state->input_buffer, 0);
 
             pthread_mutex_unlock(&state->time_mutex);
+            state->print_time = 0;
         }
         pthread_mutex_unlock(&state->print_mutex);
         usleep(100000); // Small delay to avoid busy-waiting
@@ -351,8 +351,8 @@ void *display_notifications(void *arg)
     while (1)
     {
         pthread_mutex_lock(&state->print_mutex);
-        // Check if there's no response awaited
-        if (!state->awaiting_response)
+        // Check if there's no task being printed  and no response awaited
+        if (!state->print_time && !state->awaiting_response)
         {
             pthread_mutex_lock(&state->time_mutex);
             display_task_notification(state);
@@ -441,8 +441,6 @@ void *process_input(void *arg)
                 {
                     printf("Invalid input. Please enter 'now' or a time in HH:MM format:\n");
                     fflush(stdout);
-                    // Set input_flag to 0 to indicate that new input is required
-                    state->input_flag = 0;
                 }
             }
 

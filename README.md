@@ -52,7 +52,7 @@ the clock can be setup with a speed factor to run faster (debug mode).
 ## Debugging
 If compiled with the DEBUG flag, the program will print additional debugging information, such as task details and current virtual time.
 
-## Multi-threading for an interactive agenda (Why?)
+## Multi-threading
 Besides notifications feature which was integrated whithout affecting the program core logic incorporating the **separate of concerns and Modularity principles**, an interactive agenda could have several other real-time constrained features that benefit from a multi-threaded approach. These features often involve concurrent processing and timely responses to user interactions. Here are some examples:
 
 * **Time-Sensitive Alerts:** Apart from task notifications, the agenda might generate alerts for urgent events or reminders that require immediate user attention such as medication reminders and appointments. Multi-threading ensures that these alerts are delivered promptly without delaying other program operations.
